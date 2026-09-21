@@ -21,28 +21,29 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Check Android SDK
+        shell: bash
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          ls -la "$ANDROID_HOME"
+          echo "Checking installed SDK packages..."
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --list_installed || true
 
-      - name: Install Android SDK packages
+      - name: Install Android SDK 36
         shell: bash
         run: |
           set -e
 
-          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
 
-          if [ ! -x "$SDKMANAGER" ]; then
-            SDKMANAGER="$(find "${ANDROID_HOME}/cmdline-tools" -name sdkmanager -type f | head -n 1)"
-          fi
+          echo "Using: $SDKMANAGER"
 
-          echo "Using sdkmanager: $SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses || true
 
-          yes | "$SDKMANAGER" --licenses >/dev/null || true
-
-          "$SDKMANAGER" \
-            "platform-tools" \
-            "platforms;android-36" \
-            "build-tools;36.0.0"
+          "$SDKMANAGER" "platform-tools"
+          "$SDKMANAGER" "platforms;android-36"
+          "$SDKMANAGER" "build-tools;36.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
