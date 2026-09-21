@@ -53,10 +53,68 @@ jobs:
         run: |
           echo "Searching for Gradle Android project..."
 
-          PROJECT_FILE=$(find . -type f \
+          PROJECT_FILE=$(find . -type f \( \
             -name "settings.gradle" -o \
             -name "settings.gradle.kts" \
-          -print -quit)
+          \) -print -quit)
 
           if [ -z "$PROJECT_FILE" ]; then
-            echo "ERROR: No
+            echo "ERROR: No Gradle settings file was found."
+            echo "Repository structure:"
+            find . -maxdepth 5 -type f | sort
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$PROJECT_FILE")
+
+          echo "Gradle project found at:"
+          echo "$PROJECT_DIR"
+
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+      - name: Show project structure
+        shell: bash
+        run: |
+          echo "Project directory: $PROJECT_DIR"
+          echo "Contents:"
+          find "$PROJECT_DIR" -maxdepth 3 -type f | sort
+
+      - name: Build APK
+        shell: bash
+        run: |
+          set -e
+
+          cd "$PROJECT_DIR"
+
+          echo "Building Android application..."
+          echo "Current directory:"
+          pwd
+
+          echo "Gradle files:"
+          ls -la
+
+          gradle :app:assembleDebug --stacktrace
+
+      - name: Find generated APK
+        shell: bash
+        run: |
+          echo "Searching for generated APK..."
+
+          APK=$(find "$PROJECT_DIR" -type f -path "*/app/build/outputs/apk/debug/*.apk" -print -quit)
+
+          if [ -z "$APK" ]; then
+            echo "ERROR: APK was not generated."
+            exit 1
+          fi
+
+          echo "APK found:"
+          echo "$APK"
+
+          echo "APK_PATH=$APK" >> "$GITHUB_ENV"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: AndreasHadjiApp-debug-apk
+          path: ${{ env.APK_PATH }}
+          if-no-files-found: error
